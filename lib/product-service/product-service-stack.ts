@@ -32,12 +32,7 @@ export class ProductServiceStack extends cdk.Stack {
             code: lambda.Code.fromAsset(ASSETS_PATH)
         });
 
-        const getProductsLambdaIntegration = new apigateway.LambdaIntegration(getProductsLambda, {
-            integrationResponses: [
-                { statusCode: '200' },
-            ],
-            proxy: false
-        });
+        const getProductsLambdaIntegration = new apigateway.LambdaIntegration(getProductsLambda, {});
 
         const getProductsByIdLambdaIntegration = new apigateway.LambdaIntegration(getProductsByIdLambda, {
             requestTemplates: {
