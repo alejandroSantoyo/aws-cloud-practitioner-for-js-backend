@@ -3,6 +3,7 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { AwsCloudPractitionerForJsBackendStack } from '../lib/aws-cloud-practitioner-for-js-backend-stack';
 import { HelloLambdaStack } from '../lib/hello-lambda/hello-lambda-stack';
+import { ProductServiceStack } from '../lib/product-service/product-service-stack';
 
 const app = new cdk.App();
 new AwsCloudPractitionerForJsBackendStack(app, 'AwsCloudPractitionerForJsBackendStack', {
@@ -22,3 +23,4 @@ new AwsCloudPractitionerForJsBackendStack(app, 'AwsCloudPractitionerForJsBackend
 });
 
 new HelloLambdaStack(app, 'HelloLambdaStack', {});
+new ProductServiceStack(app, 'ProductServiceStack', {});
