@@ -9,19 +9,25 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "npm run build && cdk deploy ProductServiceStack"
+    "clean": "tsc --build --clean",
+    "deploy": "npm run build && cdk deploy ProductServiceStack",
+    "init:db": "tsc && node lib/product-service/utils/fillDynamoDB.js"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
     "@types/jest": "^29.5.12",
     "@types/node": "22.5.4",
+    "aws-cdk": "2.162.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
-    "aws-cdk": "2.162.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.6.2"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.675.0",
+    "@aws-sdk/lib-dynamodb": "^3.675.0",
     "aws-cdk-lib": "2.162.0",
+    "aws-lambda": "^1.0.7",
     "constructs": "^10.0.0",
     "source-map-support": "^0.5.21"
   }
