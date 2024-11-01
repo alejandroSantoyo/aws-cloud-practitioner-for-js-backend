@@ -5,12 +5,18 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const main: Handler = async (event: APIGatewayProxyEvent) => {
     console.log("::importProductsFile:: event:", JSON.stringify(event, null, 4));
+    
     const fileName = event.queryStringParameters?.fileName;
 
     if (!fileName) {
         return {
             statusCode: 400,
             body: 'Invalid request, you are missing "fileName" the parameter',
+        }
+    } else if (!fileName.endsWith("csv")) {
+        return {
+            statusCode: 400,
+            body: 'Invalid request, only .csv files are accepted',
         }
     }
 

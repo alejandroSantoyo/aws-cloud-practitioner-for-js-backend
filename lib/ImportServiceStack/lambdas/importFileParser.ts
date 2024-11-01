@@ -9,9 +9,6 @@ import {
 import { Readable } from 'stream';
 import * as csvParser from 'csv-parser';
 
-
-
-
 export const main: Handler = async (event: S3Event) => {
     console.log("::importFileParser:: event:", JSON.stringify(event));
 
