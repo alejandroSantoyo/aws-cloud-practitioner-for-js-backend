@@ -4,8 +4,13 @@ import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
 import { Construct } from 'constructs';
 
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+
 const MEMORY_SIZE = 1024;
-const ASSETS_PATH = path.join(__dirname, './');
+const LAMBDA_ASSETS_PATH = path.join(__dirname, './lambdas');
+
+const PRODUCTS_TABLE_NAME = "Products";
+const STOCK_TABLE_NAME = "Stock";
 
 export class ProductServiceStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -21,7 +26,11 @@ export class ProductServiceStack extends cdk.Stack {
             memorySize: MEMORY_SIZE,
             timeout: cdk.Duration.seconds(5),
             handler: 'getProductsList.main',
-            code: lambda.Code.fromAsset(ASSETS_PATH)
+            code: lambda.Code.fromAsset(LAMBDA_ASSETS_PATH),
+            environment: {
+                PRODUCTS_TABLE_NAME,
+                STOCK_TABLE_NAME
+            }
         });
 
         const getProductsByIdLambda = new lambda.Function(this, 'get-products-by-id', {
@@ -29,37 +38,64 @@ export class ProductServiceStack extends cdk.Stack {
             memorySize: MEMORY_SIZE,
             timeout: cdk.Duration.seconds(5),
             handler: 'getProductsById.main',
-            code: lambda.Code.fromAsset(ASSETS_PATH)
+            code: lambda.Code.fromAsset(LAMBDA_ASSETS_PATH),
+            environment: {
+                PRODUCTS_TABLE_NAME,
+                STOCK_TABLE_NAME
+            }
+        });
+
+        // Task 4 - create product lambda
+
+        const createProductLambda = new lambda.Function(this, 'create-product', {
+            functionName: 'create-product',
+            runtime: lambda.Runtime.NODEJS_20_X,
+            memorySize: MEMORY_SIZE,
+            timeout: cdk.Duration.seconds(5),
+            handler: 'createProduct.main',
+            code: lambda.Code.fromAsset(LAMBDA_ASSETS_PATH),
+            environment: {
+                PRODUCTS_TABLE_NAME,
+                STOCK_TABLE_NAME,
+            },
         });
 
         const getProductsLambdaIntegration = new apigateway.LambdaIntegration(getProductsLambda, {});
 
         const getProductsByIdLambdaIntegration = new apigateway.LambdaIntegration(getProductsByIdLambda, {
-            requestTemplates: {
-                "application/json": JSON.stringify({
-                    pathParameters: {
-                        id: "$input.params('id')",
-                    },
-                    otherStuff: "$input.params('id')"
-                })
-            },
-            integrationResponses: [
-                { statusCode: '200' },
-            ],
-            proxy: false
+            // requestTemplates: {
+            //     "application/json": JSON.stringify({
+            //         pathParameters: {
+            //             id: "$input.params('id')",
+            //         },
+            //         otherStuff: "$input.params('id')"
+            //     })
+            // },
+            // integrationResponses: [
+            //     { statusCode: '200' },
+            // ],
+            // proxy: false
         });
+
+        const createProductLambdaIntegration = new apigateway.LambdaIntegration(createProductLambda, {});
 
         // Create a resource /products and GET request under it
         const productsResource = api.root.addResource("products");
+        
         // On this resource attach a GET method which pass the request to our lambda function
         productsResource.addMethod('GET', getProductsLambdaIntegration, {
             methodResponses: [{ statusCode: '200' }],
         });
 
+        // Add POST method to resource
+        productsResource.addMethod('POST', createProductLambdaIntegration, {
+            methodResponses: [{ statusCode: '200' }],
+        })
+
         // apply CORS to our source
         productsResource.addCorsPreflight({
             allowOrigins: ['*'],
-            allowMethods: ['GET'],
+            allowMethods: ['GET', 'POST'],
         });
 
         const productsByIdResource = productsResource.addResource("{id}")
@@ -71,6 +107,35 @@ export class ProductServiceStack extends cdk.Stack {
             allowOrigins: ['*'],
             allowMethods: ['GET'],
         });
+
+        // Task #4 - DynamoDB integration
+        const productsTable = new dynamodb.Table(this, PRODUCTS_TABLE_NAME, {
+            tableName: PRODUCTS_TABLE_NAME,
+            partitionKey: {
+                name: 'id',
+                type: dynamodb.AttributeType.STRING
+            }
+        });
+
+        const stockTable = new dynamodb.Table(this, STOCK_TABLE_NAME, {
+            tableName: STOCK_TABLE_NAME,
+            partitionKey: {
+                name: 'product_id',
+                type: dynamodb.AttributeType.STRING,
+            }
+        });
+
+        // Grant read access to /products lambda
+        productsTable.grantReadData(getProductsLambda);
+        stockTable.grantReadData(getProductsLambda);
+        
+        // Grant read access to /products/:id lambda
+        productsTable.grantReadData(getProductsByIdLambda);
+        stockTable.grantReadData(getProductsByIdLambda);
+
+        // Grant write access to /products (POST)
+        productsTable.grantWriteData(createProductLambda);
+        stockTable.grantWriteData(createProductLambda);
     }
 
 }
