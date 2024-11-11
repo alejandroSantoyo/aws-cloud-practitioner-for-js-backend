@@ -6,12 +6,17 @@ import { Bucket, EventType, HttpMethods } from 'aws-cdk-lib/aws-s3';
 import { LambdaDestination } from 'aws-cdk-lib/aws-s3-notifications';
 import { Construct } from 'constructs';
 import path = require('path');
+import { ProductServiceStack } from '../product-service/product-service-stack';
 
 const MEMORY_SIZE = 1024;
 const TIMEOUT = Duration.seconds(5);
 
+interface ImportServiceStackProps extends StackProps {
+    productServiceStack: ProductServiceStack;
+}
+
 export class ImportServiceStack extends Stack {
-    constructor(scope: Construct, id: string, props?: StackProps) {
+    constructor(scope: Construct, id: string, props?: ImportServiceStackProps) {
         super(scope, id, props);
 
         const bucket = new Bucket(this, 'ImportServiceBucket', {
@@ -25,6 +30,8 @@ export class ImportServiceStack extends Stack {
                 }
             ]
         });
+
+        const catalogItemsQueue = props?.productServiceStack.catalogItemsQueue;
 
         const importProductsFileLambda = new Function(this, 'importProductsFile', {
             runtime: Runtime.NODEJS_20_X,
@@ -45,6 +52,7 @@ export class ImportServiceStack extends Stack {
             code: Code.fromAsset(path.join(__dirname, './lambdas')),
             environment: {
                 BUCKET_NAME: bucket.bucketName,
+                SQS_URL: catalogItemsQueue?.queueUrl || ""
             },
         });
 
@@ -100,5 +108,7 @@ export class ImportServiceStack extends Stack {
         // check if this is neccesary
         bucket.grantPut(importFileParserLambda);
 
+        // Task 6 - Grant Sent Messages to importFileParserLambda
+        catalogItemsQueue?.grantSendMessages(importFileParserLambda);
     }
 }
