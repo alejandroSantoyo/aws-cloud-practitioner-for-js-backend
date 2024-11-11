@@ -59,17 +59,33 @@ export const main = async (event: SQSEvent) => {
             await dynamoDB.send(batchProductsCommand),
             await dynamoDB.send(batchStockCommand),
         ]);
-        
+
         console.log(`Total Products added: ${event.Records.length}`);
-    
+
         const publishCommand = new PublishCommand({
             Subject: "New Products Added!",
             Message: `${event.Records.length} new Products were created succesfully!`,
             TopicArn: SNS_TOPIC_ARN
         });
-    
+
         await snsClient.send(publishCommand);
         console.log("Email sent to SNS topic");
+
+        // Use case of filter sns filter, this is only for learning purposes, we can use a category to filter email distribution list more efficiently
+        const lowPricesProducts = products.filter(product => product.price < 100);
+        const filterPublishCommand = new PublishCommand({
+            Message: `There are ${lowPricesProducts.length} low price new products 🎉`,
+            TopicArn: SNS_TOPIC_ARN,
+            MessageAttributes: {
+                category: {
+                    DataType: 'String',
+                    StringValue: 'lowPrice',  // This value could be mapped dinamically if we filter for categories or any other field.
+                },
+            },
+        });
+
+        await snsClient.send(filterPublishCommand);
+        console.log("email sent to SNS filtered topic");
     } catch (error) {
         console.error("Error processing batch or sending SNS notification:", error);
     }

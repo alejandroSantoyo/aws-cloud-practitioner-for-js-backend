@@ -7,7 +7,7 @@ import { Construct } from 'constructs';
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
-import { Topic } from 'aws-cdk-lib/aws-sns';
+import { SubscriptionFilter, Topic } from 'aws-cdk-lib/aws-sns';
 import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 
 const MEMORY_SIZE = 1024;
@@ -87,7 +87,7 @@ export class ProductServiceStack extends cdk.Stack {
 
         // Create a resource /products and GET request under it
         const productsResource = api.root.addResource("products");
-        
+
         // On this resource attach a GET method which pass the request to our lambda function
         productsResource.addMethod('GET', getProductsLambdaIntegration, {
             methodResponses: [{ statusCode: '200' }],
@@ -134,7 +134,7 @@ export class ProductServiceStack extends cdk.Stack {
         // Grant read access to /products lambda
         productsTable.grantReadData(getProductsLambda);
         stockTable.grantReadData(getProductsLambda);
-        
+
         // Grant read access to /products/:id lambda
         productsTable.grantReadData(getProductsByIdLambda);
         stockTable.grantReadData(getProductsByIdLambda);
@@ -142,13 +142,23 @@ export class ProductServiceStack extends cdk.Stack {
         // Grant write access to /products (POST)
         productsTable.grantWriteData(createProductLambda);
         stockTable.grantWriteData(createProductLambda);
-        
+
         // Task #6 - SNS
         const createProductTopic = new Topic(this, "createProductTopic");
 
         createProductTopic.addSubscription(
             new EmailSubscription('santoyo.alejandro.93@gmail.com')
-        )
+        );
+
+        createProductTopic.addSubscription(
+            new EmailSubscription('satchsantoy@hotmail.com', {
+                filterPolicy: {
+                    category: SubscriptionFilter.stringFilter({
+                        allowlist: ['lowPrice'],
+                    }),
+                },
+            })
+        );
 
         // Task #6 SQS 
         this.catalogItemsQueue = new Queue(this, "catalogItemsQueue");
