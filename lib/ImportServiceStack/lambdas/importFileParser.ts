@@ -6,11 +6,12 @@ import {
     S3Client,
     waitUntilObjectNotExists,
 } from "@aws-sdk/client-s3";
+import { SendMessageCommand, SendMessageCommandOutput, SQSClient } from "@aws-sdk/client-sqs";
 import { Readable } from 'stream';
 import * as csvParser from 'csv-parser';
 
-
-
+const sqsClient = new SQSClient();
+const SQS_URL = process.env.SQS_URL as string;
 
 export const main: Handler = async (event: S3Event) => {
     console.log("::importFileParser:: event:", JSON.stringify(event));
@@ -18,6 +19,8 @@ export const main: Handler = async (event: S3Event) => {
     const s3 = new S3Client({ region: process.env.AWS_REGION });
     const bucket = event.Records[0].s3.bucket.name;
     const key = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
+
+
 
     try {
         const { Body } = await s3.send(
@@ -33,7 +36,15 @@ export const main: Handler = async (event: S3Event) => {
         return new Promise((resolve, reject) => {
             bodyStream
                 .pipe(csvParser())
-                .on('data', (data) => products.push(data as ProductRequest))
+                .on('data', async (data) => {
+                    const product = data as ProductRequest;
+
+                    // Task 6 - Send product to SQS
+                    const response = await sendMessage(data);
+                    console.log("SQS message response:", response);
+
+                    products.push(product);
+                })
                 .on('end', async () => {
                     try {
                         const jsonString = JSON.stringify(products);
@@ -84,5 +95,20 @@ export const main: Handler = async (event: S3Event) => {
         console.error(message);
         console.error(err);
         throw new Error(message);
+    }
+};
+
+const sendMessage = async (product: Omit<DBProduct, "id">): Promise<SendMessageCommandOutput | unknown> => {
+    const command = new SendMessageCommand({
+        QueueUrl: SQS_URL,
+        DelaySeconds: 10,
+        MessageBody: JSON.stringify(product),
+    });
+
+    try {
+        const response = await sqsClient.send(command);
+        return response;
+    } catch (error) {
+        return error;
     }
 }
