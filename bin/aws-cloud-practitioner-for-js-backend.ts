@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { AwsCloudPractitionerForJsBackendStack } from '../lib/aws-cloud-practitioner-for-js-backend-stack';
-import { HelloLambdaStack } from '../lib/hello-lambda/hello-lambda-stack';
 import { ProductServiceStack } from '../lib/product-service/product-service-stack';
-import { HelloS3Stack } from '../lib/hello-s3/hello-s3-stack';
 import { ImportServiceStack } from '../lib/ImportServiceStack/import-service-stack';
-import { ProductSqsStack } from '../lib/product-sqs/product-sqs-stack';
-import { ProductSnsStack } from '../lib/product-sns/product-sns-stack';
+import { AuthorizationServiceStack } from '../lib/authorization-service/authorization-service-stack';
+import { ApiWithCustomAuthorizerStack } from '../lib/TestStack/ApiWithCustomAuthorizerStack';
 
 const app = new cdk.App();
 // new AwsCloudPractitionerForJsBackendStack(app, 'AwsCloudPractitionerForJsBackendStack', {
@@ -32,3 +29,8 @@ const productServiceStack = new ProductServiceStack(app, 'ProductServiceStack', 
 new ImportServiceStack(app, 'ImportServiceStack', { productServiceStack });
 // new ProductSqsStack(app, "ProductSqsStack");
 // new ProductSnsStack(app, "ProductSnsStack");
+// new AuthorizerStack(app, 'AuthorizerStack');
+new AuthorizationServiceStack(app, 'AuthorizationServiceStack', {});
+
+
+// new ApiWithCustomAuthorizerStack(app, 'ApiWithCustomAuthorizerStack');
