@@ -1,11 +1,11 @@
-import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
-import { LambdaIntegration, RestApi } from 'aws-cdk-lib/aws-apigateway';
+import { Duration, Fn, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { AuthorizationType, IdentitySource, LambdaIntegration, RestApi, TokenAuthorizer } from 'aws-cdk-lib/aws-apigateway';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Code, Function, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Bucket, EventType, HttpMethods } from 'aws-cdk-lib/aws-s3';
 import { LambdaDestination } from 'aws-cdk-lib/aws-s3-notifications';
 import { Construct } from 'constructs';
-import path = require('path');
+import * as path from 'path';
 import { ProductServiceStack } from '../product-service/product-service-stack';
 
 const MEMORY_SIZE = 1024;
@@ -67,18 +67,34 @@ export class ImportServiceStack extends Stack {
 
         importProductsFileLambda.addToRolePolicy(s3Policy);
 
+        // Import the basicAuthorizer ARN from AuthorizationServiceStack's output
+        const basicAuthorizerArn = Fn.importValue('BasicAuthorizerArn');
+
+        // Import the Lambda function for the authorizer using the ARN
+        const basicAuthorizer = Function.fromFunctionAttributes(this, 'BasicAuthorizer', {
+            functionArn: basicAuthorizerArn,
+            sameEnvironment: true
+        });
+
+        // Authorizer
+        const authorizer = new TokenAuthorizer(this, 'CustomAuthorizer', {
+            handler: basicAuthorizer,
+            identitySource: IdentitySource.header('Authorization'),
+        });
+
         // API Gateway REST API
         const api = new RestApi(this, "import-service-api", {
             restApiName: "Import Service API",
             description: "API for imports lambda functions",
         });
 
-        const importProductsFileLambdaIntegration = new LambdaIntegration(importProductsFileLambda, {});
-
         const importProductsFileResource = api.root.addResource("import");
 
+        const importProductsFileLambdaIntegration = new LambdaIntegration(importProductsFileLambda, {});
+
         importProductsFileResource.addMethod('GET', importProductsFileLambdaIntegration, {
-            methodResponses: [{ statusCode: '200' }],
+            authorizer: authorizer,
+            authorizationType: AuthorizationType.CUSTOM
         });
 
         importProductsFileResource.addCorsPreflight({
