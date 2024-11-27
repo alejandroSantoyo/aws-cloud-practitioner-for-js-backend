@@ -5,6 +5,7 @@ import { ProductServiceStack } from '../lib/product-service/product-service-stac
 import { ImportServiceStack } from '../lib/ImportServiceStack/import-service-stack';
 import { AuthorizationServiceStack } from '../lib/authorization-service/authorization-service-stack';
 import { ApiWithCustomAuthorizerStack } from '../lib/TestStack/ApiWithCustomAuthorizerStack';
+import { CartServiceStack } from '../lib/cart-service/cart-service-stack';
 
 const app = new cdk.App();
 // new AwsCloudPractitionerForJsBackendStack(app, 'AwsCloudPractitionerForJsBackendStack', {
@@ -31,6 +32,6 @@ new ImportServiceStack(app, 'ImportServiceStack', { productServiceStack });
 // new ProductSnsStack(app, "ProductSnsStack");
 // new AuthorizerStack(app, 'AuthorizerStack');
 new AuthorizationServiceStack(app, 'AuthorizationServiceStack', {});
-
+new CartServiceStack(app, 'CartServiceStack');
 
 // new ApiWithCustomAuthorizerStack(app, 'ApiWithCustomAuthorizerStack');
