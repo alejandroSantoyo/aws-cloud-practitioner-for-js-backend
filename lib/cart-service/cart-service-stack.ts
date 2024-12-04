@@ -60,7 +60,7 @@ export class CartServiceStack extends Stack {
             engine: DatabaseInstanceEngine.POSTGRES,
             instanceType: InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MICRO),
             vpc,
-            credentials: Credentials.fromGeneratedSecret(DB_USERNAME),
+            credentials: Credentials.fromSecret(dbCredentialsSecret),
             vpcSubnets: {
                 subnetType: SubnetType.PUBLIC
             },
@@ -94,9 +94,12 @@ export class CartServiceStack extends Stack {
                 DB_HOST: dbInstance.dbInstanceEndpointAddress,
                 DB_PORT: dbInstance.dbInstanceEndpointPort,
                 DB_USER: dbCredentialsSecret.secretValueFromJson('username').unsafeUnwrap(),
-                DB_PASSWORD: dbCredentialsSecret.secretValueFromJson('password').unsafeUnwrap(),
+                DB_PASSWORD: dbInstance.secret?.secretValueFromJson('password').unsafeUnwrap() || "",
                 DB_NAME,
             },
+            vpcSubnets: {
+                subnetType: SubnetType.PUBLIC,
+            },              
         });
 
         dbInstance.connections.allowDefaultPortFrom(nestJsLambda);
